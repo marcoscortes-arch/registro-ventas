@@ -4,13 +4,14 @@ import requests
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-# Forzamos la URL directamente en el sistema antes de conectar
-st.secrets["connections"] = {
-    "gsheets": {
-        "spreadsheet": "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
-    }
-}
+# 1. Creamos la conexión pasando la configuración directamente aquí dentro
+conn = st.connection(
+    "gsheets",
+    type=GSheetsConnection,
+    spreadsheet="https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
+# 2. Leemos la pestaña especificada
+df = conn.read(worksheet="Hoja 1", ttl=0)
 # 1. Creamos la conexión segura
 conn = st.connection("gsheets", type=GSheetsConnection)
 
