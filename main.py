@@ -4,23 +4,20 @@ import requests
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-# 1. Creamos la conexión pasando la configuración directamente aquí dentro
+st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
+
+# 1. Conexión directa y segura con Google Sheets (parámetros corregidos)
 conn = st.connection(
     "gsheets",
     type=GSheetsConnection,
     spreadsheet="https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
+)
 
-# 2. Leemos la pestaña especificada
-df = conn.read(worksheet="Hoja 1", ttl=0)
-# 1. Creamos la conexión segura
-conn = st.connection("gsheets", type=GSheetsConnection)
+# 2. Leemos los datos actuales de la pestaña especificada
+df_sheets = conn.read(worksheet="Hoja 1", ttl=0)
 
-# 2. Le indicamos que lea la pestaña llamada Hoja 1
-df = conn.read(worksheet="Hoja 1", ttl=0)
-st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
-
-# URL de tu formulario/hoja para recibir datos
-URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQxMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
+# URL de tu formulario/hoja para el botón estético de abajo
+URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
 # Archivo local de respaldo por si acaso
 archivo_respaldo = "Registro_Ventas_Resp.xlsx"
@@ -79,19 +76,28 @@ if boton_guardar:
             "Venta total": venta_total
         }
 
-        # 1. Guardar de respaldo en el Excel local por seguridad
+        # --- GUARDAR EN GOOGLE SHEETS (Vínculo en tiempo real) ---
+        try:
+            nuevo_registro_df = pd.DataFrame([nueva_fila])
+            # Combinamos lo que ya tiene la nube con la nueva venta
+            df_actualizado_sheets = pd.concat([df_sheets, nuevo_registro_df], ignore_index=True)
+            # Subimos la actualización
+            conn.update(worksheet="Hoja 1", data=df_actualizado_sheets)
+            st.success("✅ ¡Sincronizado con Google Sheets exitosamente!")
+        except Exception as e:
+            st.error(f"❌ Error al conectar con Google Sheets: {e}")
+
+        # --- GUARDAR DE RESPALDO EN EXCEL LOCAL ---
         try:
             df_local = pd.read_excel(archivo_respaldo)
-            df_actualizado = pd.concat([df_local, pd.DataFrame([nueva_fila])], ignore_index=True)
+            df_actualizado_local = pd.concat([df_local, pd.DataFrame([nueva_fila])], ignore_index=True)
         except Exception:
-            df_actualizado = pd.DataFrame([nueva_fila])
+            df_actualizado_local = pd.DataFrame([nueva_fila])
 
-        df_actualizado.to_excel(archivo_respaldo, index=False)
+        df_actualizado_local.to_excel(archivo_respaldo, index=False)
 
-        # En esta etapa local nos avisa del éxito del guardado del motor
-        st.success(f"✅ ¡Venta procesada con éxito! Venta Total: ${venta_total:.2f} | Costo Total: ${costo_total:.2f}")
-        st.info("¡El motor local funciona! En el paso final de internet lo vincularemos en tiempo real a tu Google Sheets.")
-
+        st.success(f"💾 ¡Venta guardada localmente! Venta Total: ${venta_total:.2f} | Costo Total: ${costo_total:.2f}")
+        
         st.rerun()
 
 # --- SECCIÓN DE ENLACES ---
