@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import import datetime
+from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # 1. Creamos la conexión segura usando los secretos de Streamlit
