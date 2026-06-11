@@ -4,10 +4,18 @@ import requests
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-# 1. Creamos la conexión segura usando los secretos de Streamlit
+# Forzamos la URL directamente en el sistema antes de conectar
+st.secrets["connections"] = {
+    "gsheets": {
+        "spreadsheet": "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
+    }
+}
+
+# 1. Creamos la conexión segura
 conn = st.connection("gsheets", type=GSheetsConnection)
+
 # 2. Le indicamos que lea la pestaña llamada Hoja 1
-df = conn.read(url="https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing", worksheet="Hoja 1", ttl=0)
+df = conn.read(worksheet="Hoja 1", ttl=0)
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
 # URL de tu formulario/hoja para recibir datos
