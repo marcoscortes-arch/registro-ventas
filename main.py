@@ -7,8 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 # 1. Creamos la conexión segura usando los secretos de Streamlit
 conn = st.connection("gsheets", type=GSheetsConnection)
 # 2. Le indicamos que lea la pestaña llamada Hoja 1
-df = conn.read(spreadsheet="https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing", worksheet="Hoja 1", ttl=0)
-# Configuración de la página para que se adapte perfectamente al celular
+df = conn.read(spreadsheet="1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik", worksheet="Hoja 1", ttl=0)
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
 # URL de tu formulario/hoja para recibir datos
