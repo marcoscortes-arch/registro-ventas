@@ -5,8 +5,7 @@ from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # 1. Creamos la conexión segura usando los secretos de Streamlit
-conn = st.connection("gsheets", type=GSheetsConnection)
-
+conn = st.connection("gsheets", type="gsheets")
 # 2. Le indicamos que lea la pestaña llamada Hoja 1
 df = conn.read(worksheet="Hoja 1", ttl=0)
 # Configuración de la página para que se adapte perfectamente al celular
