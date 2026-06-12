@@ -6,7 +6,7 @@ from datetime import datetime
 # Configuración para pantalla móvil
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
-# Enlace de tu Google Apps Script (Tu puente directo)
+# Enlaces de conexión
 URL_MI_WEB_APP = "https://script.google.com/macros/s/AKfycbwbZWOK1Q3j54dEoefLHxwdz0N_1jtGoYjdXhaHaKjB9sZd0O5wHCNXFB1Zoy8QhVwkwQ/exec"
 URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
@@ -19,16 +19,20 @@ with st.form("formulario_ventas"):
     
     with col1:
         cliente = st.text_input("👤 Cliente")
-        tipo_producto = st.selectbox("👗 Tipo de Producto", ["Pijama", "Vestido", "Conjunto"])
+        # Agregamos 'Interior' a la lista principal de productos
+        tipo_producto = st.selectbox("👗 Tipo de Producto", ["Pijama", "Vestido", "Conjunto", "Interior"])
         talla = st.text_input("📏 Talla")
         piezas = st.number_input("📦 Piezas", min_value=1, value=1, step=1)
         genero = st.selectbox("🧒 Género", ["Niño", "Niña", "Adulto Mujer", "Adulto Hombre"])
         
-        # El campo Interior SOLO se muestra si el producto es una Pijama
+        # El campo de detalle se adapta de forma inteligente según el producto elegido
         if tipo_producto == "Pijama":
-            interior = st.text_input("🩲 Interior")
+            detalle_prenda = st.text_input("🩲 Detalle de Interior", placeholder="Ej: Short, Pantalón")
+        elif tipo_producto == "Interior":
+            detalle_prenda = st.text_input("🩲 Tipo de Prenda Interior", placeholder="Ej: Bóxer, Top, Cachetero")
         else:
-            interior = "" # Se envía vacío si es vestido o conjunto
+            # Para Vestidos o Conjuntos se llena solo de forma automática
+            detalle_prenda = st.text_input("📝 Nota / Detalle", value=tipo_producto)
             
         fecha = st.date_input("📅 Fecha de venta", datetime.now())
 
@@ -47,7 +51,7 @@ with st.form("formulario_ventas"):
 
 # --- LÓGICA DE GUARDADO ---
 if boton_guardar:
-    # Candado estricto: Cliente y Talla no pueden estar vacíos
+    # Candado estricto: Cliente y Talla son obligatorios
     if cliente.strip() == "" or talla.strip() == "":
         st.error("⚠️ Por favor, rellena los campos obligatorios: Cliente y Talla.")
     else:
@@ -55,15 +59,16 @@ if boton_guardar:
         venta_total = piezas * precio_unitario
         fecha_str = fecha.strftime("%d/%m/%Y")
         
-        # Combinamos inteligentemente el campo Interior para vestidos/conjuntos
-        detalle_interior = interior if tipo_producto == "Pijama" else tipo_producto
+        # Si el detalle quedó vacío, le asignamos el tipo de producto por defecto
+        valor_final_detalle = detalle_prenda.strip() if detalle_prenda.strip() != "" else tipo_producto
 
+        # Estructura mapeada idéntica a tu Google Sheets
         datos_venta = {
             "Cliente": cliente,
             "Talla": talla,
             "Piezas": piezas,
             "Genero": genero,
-            "Interior": detalle_interior,
+            "Interior": valor_final_detalle, # Manda la información directo a la columna 'Interior'
             "Fecha": fecha_str,
             "Lugar": lugar,
             "TipoPedido": tipo_pedido,
@@ -73,12 +78,15 @@ if boton_guardar:
             "VentaTotal": venta_total
         }
         
-        # Envío directo a Google Sheets
+        # Envío directo a Google Sheets sin intermediarios
         try:
-            requests.post(URL_MI_WEB_APP, data=json.dumps(datos_venta), headers={"Content-Type": "application/json"})
-            st.success(f"✅ ¡Sincronizado con Google Sheets exitosamente! Total: ${venta_total:.2f}")
-            st.balloons()
-            st.rerun()
+            respuesta = requests.post(URL_MI_WEB_APP, data=json.dumps(datos_venta), headers={"Content-Type": "application/json"})
+            if respuesta.status_code == 200:
+                st.success(f"✅ ¡Sincronizado con Google Sheets exitosamente! Total: ${venta_total:.2f}")
+                st.balloons()
+                st.rerun()
+            else:
+                st.error("⚠️ La nube no pudo procesar el registro correctamente.")
         except Exception as e:
             st.error("⚠️ Error de conexión al intentar enviar los datos.")
 
