@@ -4,16 +4,20 @@ import requests
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
+# Configuración de la página para que se adapte perfectamente al celular
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
-# 1. Creamos la conexión base limpia
+# 1. Conexión segura con Google Sheets (usará los secretos de tu cuenta de Streamlit)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# URL exacta de tu documento de Google Sheets
-URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
+# 2. Leemos los datos actuales que ya existan en la nube para no borrarlos
+try:
+    df_sheets = conn.read(worksheet="Hoja 1", ttl=0)
+except Exception:
+    df_sheets = pd.DataFrame()
 
-# 2. Leemos la nube pasándole la URL directamente a la lectura
-df_sheets = conn.read(spreadsheet=URL_GOOGLE_SHEETS, worksheet="Hoja 1", ttl=0)
+# URL de tu hoja para el botón de enlace directo de abajo
+URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
 # Archivo local de respaldo por si acaso
 archivo_respaldo = "Registro_Ventas_Resp.xlsx"
@@ -24,7 +28,7 @@ st.write("Registra tus ventas de forma rápida. Los datos se sincronizan con Goo
 # --- FORMULARIO DE CAPTURA ---
 with st.form("formulario_ventas"):
     col1, col2 = st.columns(2)
-
+    
     with col1:
         cliente = st.text_input("👤 Cliente")
         talla = st.text_input("📏 Talla")
@@ -36,9 +40,9 @@ with st.form("formulario_ventas"):
     with col2:
         lugar = st.text_input("📍 Lugar de envío")
         tipo_pedido = st.selectbox("🚚 Tipo de pedido", [
-            "Servientrega",
-            "Contra entrega Dopri",
-            "Envio Cooperativa",
+            "Servientrega", 
+            "Contra entrega Dopri", 
+            "Envio Cooperativa", 
             "Retiro en Santo Domingo"
         ])
         precio_unitario = st.number_input("💵 Precio Unitario ($)", min_value=0.0, value=0.0, step=0.5)
@@ -56,7 +60,7 @@ if boton_guardar:
         costo_total = piezas * costo_compra
         venta_total = piezas * precio_unitario
         fecha_str = fecha.strftime("%d/%m/%Y")
-
+        
         nueva_fila = {
             "Cliente": cliente,
             "Talla": talla,
@@ -71,27 +75,26 @@ if boton_guardar:
             "Costo total": costo_total,
             "Venta total": venta_total
         }
-
-        # --- GUARDAR EN GOOGLE SHEETS ---
+        
+        # --- 1. GUARDADO REAL EN GOOGLE SHEETS ---
         try:
             nuevo_registro_df = pd.DataFrame([nueva_fila])
-            # Combinamos la información actual con el nuevo registro
             df_actualizado_sheets = pd.concat([df_sheets, nuevo_registro_df], ignore_index=True)
-            # Actualizamos la hoja de cálculo usando la URL directa
-            conn.update(spreadsheet=URL_GOOGLE_SHEETS, worksheet="Hoja 1", data=df_actualizado_sheets)
+            # Sincroniza subiendo la fila a la nube
+            conn.update(worksheet="Hoja 1", data=df_actualizado_sheets)
             st.success("✅ ¡Sincronizado con Google Sheets exitosamente!")
         except Exception as e:
-            st.error(f"❌ Error al conectar con Google Sheets: {e}")
-
-        # --- GUARDAR DE RESPALDO EN EXCEL LOCAL ---
+            st.error(f"❌ Error al sincronizar con Google Sheets (revisa los Secrets): {e}")
+        
+        # --- 2. RESPALDO EXCEL LOCAL ---
         try:
             df_local = pd.read_excel(archivo_respaldo)
             df_actualizado_local = pd.concat([df_local, pd.DataFrame([nueva_fila])], ignore_index=True)
         except Exception:
             df_actualizado_local = pd.DataFrame([nueva_fila])
-
+        
         df_actualizado_local.to_excel(archivo_respaldo, index=False)
-
+        
         st.success(f"💾 ¡Venta guardada localmente! Venta Total: ${venta_total:.2f} | Costo Total: ${costo_total:.2f}")
         
         st.rerun()
