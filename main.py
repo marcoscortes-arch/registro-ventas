@@ -11,7 +11,7 @@ URL_MI_WEB_APP = "https://script.google.com/macros/s/AKfycbwbZWOK1Q3j54dEoefLHxw
 URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
 st.title("📱 Captura de Ventas")
-st.write("Registra tus ventas de forma rápida. Los datos se sincronizan con Google Sheets.")
+st.write("Registra tus ventas de ropa de forma rápida. Los datos se sincronizan con Google Sheets.")
 
 # --- FORMULARIO DE CAPTURA ---
 with st.form("formulario_ventas"):
@@ -19,10 +19,17 @@ with st.form("formulario_ventas"):
     
     with col1:
         cliente = st.text_input("👤 Cliente")
+        tipo_producto = st.selectbox("👗 Tipo de Producto", ["Pijama", "Vestido", "Conjunto"])
         talla = st.text_input("📏 Talla")
         piezas = st.number_input("📦 Piezas", min_value=1, value=1, step=1)
-        genero = st.selectbox("🧒 Género", ["Niño", "Niña"])
-        interior = st.text_input("🩲 Interior")
+        genero = st.selectbox("🧒 Género", ["Niño", "Niña", "Adulto Mujer", "Adulto Hombre"])
+        
+        # El campo Interior SOLO se muestra si el producto es una Pijama
+        if tipo_producto == "Pijama":
+            interior = st.text_input("🩲 Interior")
+        else:
+            interior = "" # Se envía vacío si es vestido o conjunto
+            
         fecha = st.date_input("📅 Fecha de venta", datetime.now())
 
     with col2:
@@ -40,19 +47,23 @@ with st.form("formulario_ventas"):
 
 # --- LÓGICA DE GUARDADO ---
 if boton_guardar:
+    # Candado estricto: Cliente y Talla no pueden estar vacíos
     if cliente.strip() == "" or talla.strip() == "":
-        st.error("⚠️ Por favor, rellena los campos obligatorios (Cliente y Talla).")
+        st.error("⚠️ Por favor, rellena los campos obligatorios: Cliente y Talla.")
     else:
         costo_total = piezas * costo_compra
         venta_total = piezas * precio_unitario
         fecha_str = fecha.strftime("%d/%m/%Y")
         
+        # Combinamos inteligentemente el campo Interior para vestidos/conjuntos
+        detalle_interior = interior if tipo_producto == "Pijama" else tipo_producto
+
         datos_venta = {
             "Cliente": cliente,
             "Talla": talla,
             "Piezas": piezas,
             "Genero": genero,
-            "Interior": interior,
+            "Interior": detalle_interior,
             "Fecha": fecha_str,
             "Lugar": lugar,
             "TipoPedido": tipo_pedido,
@@ -64,15 +75,12 @@ if boton_guardar:
         
         # Envío directo a Google Sheets
         try:
-            respuesta = requests.post(URL_MI_WEB_APP, data=json.dumps(datos_venta), headers={"Content-Type": "application/json"})
-            if respuesta.status_code == 200 and respuesta.json().get("status") == "success":
-                st.success(f"✅ ¡Sincronizado con Google Sheets exitosamente! Total: ${venta_total:.2f}")
-                st.balloons() # ¡Efecto de globos para celebrar!
-                st.rerun()
-            else:
-                st.error("⚠️ La nube recibió el contacto pero no procesó el registro.")
+            requests.post(URL_MI_WEB_APP, data=json.dumps(datos_venta), headers={"Content-Type": "application/json"})
+            st.success(f"✅ ¡Sincronizado con Google Sheets exitosamente! Total: ${venta_total:.2f}")
+            st.balloons()
+            st.rerun()
         except Exception as e:
-            st.error("⚠️ Error crítico de conexión al intentar enviar los datos.")
+            st.error("⚠️ Error de conexión al intentar enviar los datos.")
 
 st.markdown("---")
 st.subheader("🔗 Enlace Directo")
