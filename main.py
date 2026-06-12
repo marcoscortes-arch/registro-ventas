@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import requests
 import json
 from datetime import datetime
@@ -7,12 +6,9 @@ from datetime import datetime
 # Configuración para pantalla móvil
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
-# Enlace mágico directo a tu Google Apps Script
+# Enlace de tu Google Apps Script (Tu puente directo)
 URL_MI_WEB_APP = "https://script.google.com/macros/s/AKfycbwbZWOK1Q3j54dEoefLHxwdz0N_1jtGoYjdXhaHaKjB9sZd0O5wHCNXFB1Zoy8QhVwkwQ/exec"
-
-# URL estética para el botón de acceso rápido abajo
 URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
-archivo_respaldo = "Registro_Ventas_Resp.xlsx"
 
 st.title("📱 Captura de Ventas")
 st.write("Registra tus ventas de forma rápida. Los datos se sincronizan con Google Sheets.")
@@ -51,7 +47,6 @@ if boton_guardar:
         venta_total = piezas * precio_unitario
         fecha_str = fecha.strftime("%d/%m/%Y")
         
-        # Estructura limpia de datos para enviar a Google Sheets
         datos_venta = {
             "Cliente": cliente,
             "Talla": talla,
@@ -67,27 +62,17 @@ if boton_guardar:
             "VentaTotal": venta_total
         }
         
-        # --- 1. ENVÍO EN TIEMPO REAL A GOOGLE SHEETS ---
+        # Envío directo a Google Sheets
         try:
             respuesta = requests.post(URL_MI_WEB_APP, data=json.dumps(datos_venta), headers={"Content-Type": "application/json"})
             if respuesta.status_code == 200 and respuesta.json().get("status") == "success":
-                st.success("✅ ¡Sincronizado con Google Sheets exitosamente!")
+                st.success(f"✅ ¡Sincronizado con Google Sheets exitosamente! Total: ${venta_total:.2f}")
+                st.balloons() # ¡Efecto de globos para celebrar!
+                st.rerun()
             else:
-                st.warning("⚠️ Guardado localmente, pero la nube no procesó el registro.")
+                st.error("⚠️ La nube recibió el contacto pero no procesó el registro.")
         except Exception as e:
-            st.error("⚠️ Guardado localmente. Error de conexión con la nube.")
-        
-        # --- 2. RESPALDO EXCEL LOCAL ---
-        try:
-            df_local = pd.read_excel(archivo_respaldo)
-            df_actualizado_local = pd.concat([df_local, pd.DataFrame([datos_venta])], ignore_index=True)
-        except Exception:
-            df_actualizado_local = pd.DataFrame([datos_venta])
-        
-        df_actualizado_local.to_excel(archivo_respaldo, index=False)
-        st.success(f"💾 ¡Venta guardada en respaldo local! Total: ${venta_total:.2f}")
-        
-        st.rerun()
+            st.error("⚠️ Error crítico de conexión al intentar enviar los datos.")
 
 st.markdown("---")
 st.subheader("🔗 Enlace Directo")
