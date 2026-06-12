@@ -7,17 +7,17 @@ from streamlit_gsheets import GSheetsConnection
 # Configuración de la página para que se adapte perfectamente al celular
 st.set_page_config(page_title="Captura de Ventas", page_icon="📱", layout="centered")
 
-# 1. Conexión segura con Google Sheets (usará los secretos de tu cuenta de Streamlit)
+# URL exacta de tu documento de Google Sheets para la conexión directa
+URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
+
+# 1. Creamos la conexión base limpia sin depender del panel de Secrets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 2. Leemos los datos actuales que ya existan en la nube para no borrarlos
+# 2. Leemos la nube pasándole la URL directamente a la lectura
 try:
-    df_sheets = conn.read(worksheet="Hoja 1", ttl=0)
+    df_sheets = conn.read(spreadsheet=URL_GOOGLE_SHEETS, worksheet="Hoja 1", ttl=0)
 except Exception:
     df_sheets = pd.DataFrame()
-
-# URL de tu hoja para el botón de enlace directo de abajo
-URL_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1Cw4GQXMYOtsSPtlvPZXz48FP35Bv3E3ec6_4BeKY1Ik/edit?usp=sharing"
 
 # Archivo local de respaldo por si acaso
 archivo_respaldo = "Registro_Ventas_Resp.xlsx"
@@ -76,15 +76,16 @@ if boton_guardar:
             "Venta total": venta_total
         }
         
-        # --- 1. GUARDADO REAL EN GOOGLE SHEETS ---
+        # --- 1. GUARDADO EN GOOGLE SHEETS ---
         try:
             nuevo_registro_df = pd.DataFrame([nueva_fila])
+            # Combinamos la información que ya existe con la nueva fila
             df_actualizado_sheets = pd.concat([df_sheets, nuevo_registro_df], ignore_index=True)
-            # Sincroniza subiendo la fila a la nube
-            conn.update(worksheet="Hoja 1", data=df_actualizado_sheets)
+            # Actualizamos la nube apuntando directo a la URL
+            conn.update(spreadsheet=URL_GOOGLE_SHEETS, worksheet="Hoja 1", data=df_actualizado_sheets)
             st.success("✅ ¡Sincronizado con Google Sheets exitosamente!")
         except Exception as e:
-            st.error(f"❌ Error al sincronizar con Google Sheets (revisa los Secrets): {e}")
+            st.error(f"❌ Error al subir a Google Sheets: {e}")
         
         # --- 2. RESPALDO EXCEL LOCAL ---
         try:
